@@ -1,0 +1,43 @@
+name: Build Windows app
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build exe
+        run: >
+          pyinstaller --noconfirm --clean --windowed --name GalleryToPDF
+          --collect-all yt_dlp --collect-all imageio_ffmpeg --collect-all certifi
+          --hidden-import yt_dlp.extractor.lazy_extractors
+          app.py
+
+      - name: Smoke test (exe starts and core imports)
+        shell: pwsh
+        run: |
+          Get-ChildItem dist/GalleryToPDF | Select-Object -First 20
+          if (-not (Test-Path dist/GalleryToPDF/GalleryToPDF.exe)) { throw "exe missing" }
+          python -c "import imageio_ffmpeg,os;p=imageio_ffmpeg.get_ffmpeg_exe();print(p);assert os.path.exists(p)"
+
+      - name: Zip
+        shell: pwsh
+        run: Compress-Archive -Path dist/GalleryToPDF/* -DestinationPath GalleryToPDF-Windows.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GalleryToPDF-Windows
+          path: GalleryToPDF-Windows.zip
