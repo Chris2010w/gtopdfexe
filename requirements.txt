@@ -1,0 +1,5 @@
+requests
+Pillow
+yt-dlp
+imageio-ffmpeg
+pyinstaller
